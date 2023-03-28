@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+	<if condition='isDefined("server.mode")'>
+		<then>
+			<include resource="property/${server.mode}/logback.xml"/>
+		</then>
+		<else>
+			<include resource="property/debug/logback.xml"/>
+		</else>
+	</if>
+	
+</configuration>

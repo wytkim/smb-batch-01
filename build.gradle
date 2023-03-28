@@ -19,9 +19,18 @@ repositories {
 }
 
 dependencies {
+	//implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-batch'
 	runtimeOnly 'org.hsqldb:hsqldb'
 
+
+	// apache commons api 
+	implementation 'org.apache.commons:commons-lang3'
+	// logback 배포분기 condition 사용.
+	implementation 'org.codehaus.janino:janino:3.1.2'
+	// 쿼리 로깅 처리
+	implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
+	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

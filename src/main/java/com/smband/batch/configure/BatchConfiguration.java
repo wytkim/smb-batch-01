@@ -42,6 +42,7 @@ import com.smband.batch.processor.PersonItemProcessor;
  * @version 
  * @since 
  */
+//@EnableBatchProcessing
 @Configuration
 public class BatchConfiguration {
 	
