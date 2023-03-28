@@ -13,10 +13,16 @@ package com.smband.batch.configure;
 import javax.sql.DataSource;
 
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
@@ -24,6 +30,7 @@ import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilde
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -32,6 +39,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import com.smband.batch.listener.JobCompletionNotificationListener;
 import com.smband.batch.model.Person;
 import com.smband.batch.processor.PersonItemProcessor;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * <pre>
@@ -42,7 +51,7 @@ import com.smband.batch.processor.PersonItemProcessor;
  * @version 
  * @since 
  */
-//@EnableBatchProcessing
+@EnableBatchProcessing(dataSourceRef = "mainDataSource", transactionManagerRef = "tranManager")
 @Configuration
 public class BatchConfiguration {
 	

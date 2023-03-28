@@ -21,15 +21,22 @@ repositories {
 dependencies {
 	//implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-batch'
-	runtimeOnly 'org.hsqldb:hsqldb'
+	// mybatis 처리.
+	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.1'
+	
+	//runtimeOnly 'org.hsqldb:hsqldb'
 
 
+	// jdbc
+	implementation 'org.xerial:sqlite-jdbc'
+	//implementation 'com.github.gwenn:sqlite-dialect:0.1.2'
+	implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'// query logging
 	// apache commons api 
 	implementation 'org.apache.commons:commons-lang3'
 	// logback 배포분기 condition 사용.
 	implementation 'org.codehaus.janino:janino:3.1.2'
 	// 쿼리 로깅 처리
-	implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
+	//implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
 	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
