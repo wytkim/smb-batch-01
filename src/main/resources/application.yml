@@ -2,7 +2,7 @@
 spring:
   batch:
     job:
-      enabled: true      # CommandLineRunner 설정 해제 .
+      enabled: false      # CommandLineRunner 설정 해제 .
     jdbc:
       table-prefix: SMB_
       platform: sqlite

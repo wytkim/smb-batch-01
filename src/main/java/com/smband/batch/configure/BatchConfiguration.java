@@ -10,37 +10,45 @@
  */
 package com.smband.batch.configure;
 
+import java.util.HashMap;
+
 import javax.sql.DataSource;
 
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.job.flow.JobExecutionDecider;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.Order;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+import org.springframework.batch.item.database.builder.JdbcPagingItemReaderBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import com.smband.batch.item.SmsStepDecider;
 import com.smband.batch.listener.JobCompletionNotificationListener;
+import com.smband.batch.listener.SmsQueueJobListener;
 import com.smband.batch.model.Person;
+import com.smband.batch.model.SmsQueueData;
 import com.smband.batch.processor.PersonItemProcessor;
 
-import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * <pre>
@@ -51,12 +59,17 @@ import jakarta.annotation.PostConstruct;
  * @version 
  * @since 
  */
+@Slf4j
 @EnableBatchProcessing(dataSourceRef = "mainDataSource", transactionManagerRef = "tranManager")
 @Configuration
 public class BatchConfiguration {
 	
+	
+	
 	@Bean
 	public FlatFileItemReader<Person> reader() {
+		
+		
 		return new FlatFileItemReaderBuilder<Person>()
 				.name("personItemReader")
 				.resource(new ClassPathResource("sample-data.csv"))
@@ -102,5 +115,109 @@ public class BatchConfiguration {
 				.processor(processor())
 				.writer(writer)
 				.build();
+	}
+	
+	// jdbccursor reader 구성
+	@Bean
+	public ItemReader<SmsQueueData> smsQueueItemReader(DataSource dataSource){
+		log.info("smsQueue reader: {}", dataSource);
+		return new JdbcCursorItemReaderBuilder<SmsQueueData>()
+				.name("smsQueueItemReader")
+				.fetchSize(10)
+				.dataSource(dataSource)
+				.beanRowMapper(SmsQueueData.class)
+				.sql("select queue_id, name, tel, message, status from sms_queue where status=?")
+				.queryArguments("I")
+				.maxItemCount(1000000)
+				.currentItemCount(0)
+				.maxRows(100)
+				.build();
+	}
+	
+	@Bean
+	@StepScope
+	public ItemReader<SmsQueueData> smsQueueItemReader2 (DataSource dataSource){
+//		ExecutionContext context = stepExecution.getJobExecution().getExecutionContext();
+//		String value = (String)context.get("temp");
+//		if(value == null) {
+//			value = "임시";
+//		}else {
+//			value = value+" 임시";
+//		}
+//		context.put("temp", value);
+//		log.info("context value: {}", value);
+		HashMap<String, Order> sortKey = new HashMap<>();
+        sortKey.put("queue_id", Order.ASCENDING);
+        
+		return new JdbcPagingItemReaderBuilder<SmsQueueData>()
+                .name("smsQueueItemReader2")
+                .dataSource(dataSource)
+                .pageSize(10)
+                .beanRowMapper(SmsQueueData.class)
+//                .fetchSize(CHUNK_SIZE)
+                .currentItemCount(0)
+                .maxItemCount(1000000)
+                .selectClause("queue_id, name, tel, message, status")
+                .fromClause("from sms_queue")
+                .whereClause("status='I'")
+                .sortKeys(sortKey)
+                .build();
+	}
+	
+//	@Bean
+//	public ItemProcessor<SmsQueueData, SmsQueueData> smsQueueProcessor(){
+//		return new SmsQueueProcessor();
+//	}
+	
+	@Bean
+	public ItemWriter<SmsQueueData> smsQueueWriter(DataSource dataSource){
+		//return new SampleItemWriter();
+		return new JdbcBatchItemWriterBuilder<SmsQueueData>()
+				.itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
+				.sql("update sms_queue set status=:status where queue_id=:queueId")
+				//.sql("INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)")
+				.dataSource(dataSource)
+				.build();
+	}
+	
+	@Bean
+	public Step smsQueueStep (JobRepository jobRepository, PlatformTransactionManager tranManager
+			, ItemReader<SmsQueueData> smsQueueItemReader2
+			, ItemProcessor<SmsQueueData, SmsQueueData> smsQueueProcessor
+			, ItemWriter<SmsQueueData> smsQueueWriter
+			) {
+		return new StepBuilder("smsQueueStep", jobRepository)
+				.<SmsQueueData, SmsQueueData>chunk(10, tranManager)
+				.reader(smsQueueItemReader2)
+				.processor(smsQueueProcessor)
+				.writer(smsQueueWriter)
+				.build();
+	}
+	
+	@Bean
+	public Step checkSmsStep(JobRepository jobRepository, PlatformTransactionManager tranManager, Tasklet smsCheckTaskLet) {
+		return new StepBuilder("checkSmsStep", jobRepository)
+				.tasklet(smsCheckTaskLet, tranManager)
+				.build();
+	}
+	
+	@Bean
+	public JobExecutionDecider smsDecider() {
+		return new SmsStepDecider();
+	}
+	
+	@Bean
+	public Job smsQueueJob(JobRepository jobRepository, Step smsQueueStep, Step checkSmsStep,  SmsQueueJobListener listener
+			, JobExecutionDecider smsDecider) {
+		return new JobBuilder("smsQueueJob", jobRepository)
+				.incrementer(new RunIdIncrementer())
+				.listener(listener)
+				.start(checkSmsStep)
+				.next(smsDecider)
+					.on(SmsStepDecider.EXIST_DATA).to(smsQueueStep)
+				//.start(smsQueueStep)
+				//.flow(step1)
+				.end()
+				.build(); 
 	}
 }

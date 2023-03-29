@@ -25,14 +25,17 @@ public class SmbBatch01Application {
 
 	@Autowired
 	private JobLauncher jobLauncher;
+//	@Autowired
+//	private Job importUserJob;
 	@Autowired
-	private Job job1;
+	private Job smsQueueJob;
 	
 	@PostConstruct
 	public void init() throws JobExecutionAlreadyRunningException, JobRestartException, JobInstanceAlreadyCompleteException, JobParametersInvalidException {
 		JobParametersBuilder builder = new JobParametersBuilder().addDate("newDate", new Date());
 		
-		jobLauncher.run(job1, builder.toJobParameters());
+		//jobLauncher.run(job1, builder.toJobParameters());
+		jobLauncher.run(smsQueueJob, builder.toJobParameters());
 	}
 
 	public static void main(String[] args) {

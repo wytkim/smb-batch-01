@@ -8,18 +8,24 @@
  * you entered into with SM band.
  *
  */
-package com.smband.batch.mapper;
+package com.smband.batch.model;
+
+import lombok.Data;
 
 /**
  * <pre>
  * 개요:
  * </pre>
  * @author ytkim
- * @create 2023. 3. 28.
+ * @create 2023. 3. 29.
  * @version 
  * @since 
  */
-public interface SampleMapper {
-
-	int waitSmsCount();
+@Data
+public class SmsQueueData {
+	private int queueId;
+	private String name;
+	private String tel;
+	private String message;
+	private String status;
 }
