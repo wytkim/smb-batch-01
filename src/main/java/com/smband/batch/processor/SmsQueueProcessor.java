@@ -14,10 +14,12 @@ import java.util.Random;
 
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
+import org.springframework.batch.core.step.skip.SkipPolicy;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
+import com.smband.batch.exception.StepException;
 import com.smband.batch.model.SmsQueueData;
 
 import lombok.extern.slf4j.Slf4j;
@@ -39,8 +41,15 @@ public class SmsQueueProcessor implements ItemProcessor<SmsQueueData, SmsQueueDa
 	@Override
 	public SmsQueueData process(SmsQueueData item) throws Exception {
 		//log.info("before processor item: {}", item);
-		
-		item.setStatus(random.nextBoolean()?"S":"F");
+		int randomType = random.nextInt(4);
+		if(randomType == 2) {
+			throw new StepException("Processor Exception Skip 테스트 중입니다.");
+		}
+		else if(randomType == 3) {
+			log.info("필터링 처리된 데이터: {}", item);
+			return null;
+		}
+		item.setStatus(randomType==0?"S":"F");
 		
 		if("F".equals(item.getStatus())) {
 			

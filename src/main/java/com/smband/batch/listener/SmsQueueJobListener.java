@@ -10,9 +10,12 @@
  */
 package com.smband.batch.listener;
 
+import java.util.Date;
+
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +42,17 @@ public class SmsQueueJobListener implements JobExecutionListener {
 			String queueIds = jobContext.containsKey("queueIds")?jobContext.getString("queueIds"):""; 
 			log.info("fail to send queueIds: {}", queueIds);
 		}
+		
+		log.info("## afterJob : {}", jobExecution.getExitStatus());
 	}
+
+	@Override
+	public void beforeJob(JobExecution jobExecution) {
+		JobParameters params = jobExecution.getJobParameters();
+		Date newDate = params.getDate("newDate");
+		log.info("## beforeJob Job New Date: {}", newDate);
+		
+	}
+	
 	
 }

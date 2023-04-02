@@ -36,14 +36,18 @@ import org.springframework.batch.item.database.builder.JdbcPagingItemReaderBuild
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
+import org.springframework.batch.repeat.exception.ExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import com.smband.batch.exception.StepException;
 import com.smband.batch.item.SmsStepDecider;
 import com.smband.batch.listener.JobCompletionNotificationListener;
 import com.smband.batch.listener.SmsQueueJobListener;
+import com.smband.batch.listener.SmsQueueStepListener;
+import com.smband.batch.listener.SmsStepListener;
 import com.smband.batch.model.Person;
 import com.smband.batch.model.SmsQueueData;
 import com.smband.batch.processor.PersonItemProcessor;
@@ -63,8 +67,6 @@ import lombok.extern.slf4j.Slf4j;
 @EnableBatchProcessing(dataSourceRef = "mainDataSource", transactionManagerRef = "tranManager")
 @Configuration
 public class BatchConfiguration {
-	
-	
 	
 	@Bean
 	public FlatFileItemReader<Person> reader() {
@@ -185,12 +187,21 @@ public class BatchConfiguration {
 			, ItemReader<SmsQueueData> smsQueueItemReader2
 			, ItemProcessor<SmsQueueData, SmsQueueData> smsQueueProcessor
 			, ItemWriter<SmsQueueData> smsQueueWriter
+			, ExceptionHandler stepExceptionHandler
+			, SmsQueueStepListener smsQueueStepListener
+			//, SmsStepListener stepListener
 			) {
 		return new StepBuilder("smsQueueStep", jobRepository)
 				.<SmsQueueData, SmsQueueData>chunk(10, tranManager)
 				.reader(smsQueueItemReader2)
 				.processor(smsQueueProcessor)
 				.writer(smsQueueWriter)
+				.exceptionHandler(stepExceptionHandler)
+				.listener(smsQueueStepListener)
+				//.listener(stepListener)
+				.faultTolerant()
+				.skip(StepException.class)
+				.skipLimit(100)
 				.build();
 	}
 	
